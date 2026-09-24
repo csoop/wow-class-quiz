@@ -1,0 +1,15 @@
+{
+  "name": "wow-class-quiz",
+  "version": "1.0.0",
+  "description": "魔兽世界职业测试 · 星命罗盘 —— 结合职业背景 / 星座学 / 性格维度的确定性职业匹配测试（粉丝向作品）",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "serve": "node scripts/serve.mjs",
+    "verify": "node scripts/verify-engine.mjs",
+    "verify:contrast": "node scripts/verify-contrast.mjs",
+    "verify:exports": "node scripts/test-exports.mjs",
+    "e2e": "bash scripts/e2e.sh",
+    "shot": "node scripts/shot.mjs"
+  }
+}
