@@ -145,7 +145,9 @@ async function main() {
       startedAt: Date.now() - 120e3,
     };
     await evalJs(`localStorage.setItem('wow-class-quiz:session:v1', ${JSON.stringify(JSON.stringify(session))})`);
-    await nav(`${BASE}/#/sign`);
+    // 种子写入后必须重新加载文档：restoreSession() 只在启动时跑一次，
+    // 若只改 hash，#/sign 与 #/quiz 会因 state 为空被重定向回首页（会静默拍出一堆首页）。
+    await nav(`${BASE}/?shot=1#/sign`);
     await viewport(1440, 900);
     await shot('02b-sign-desktop.webp', { fullPage: true });
     await nav(`${BASE}/#/quiz`);

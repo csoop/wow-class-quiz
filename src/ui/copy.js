@@ -168,8 +168,8 @@ export function buildMainReasons(result, mainClass, zodiacPrimary) {
     : `气质对位：你的人格底色是「${d1.name} × ${d2.name}」，与${mainClass.name}惯用的「${mainClass.keywords.join(' · ')}」不是同一路数——但这不是错配：你的${d1.name}正落在它最少伸出的那一侧，彼此补位，比“同一种人”更完整。`;
 
   const r2Variants = [
-    `背景共鸣：18 道题里，有 ${n} 次你的选择与${mainClass.name}的职业背景同频。你一次次把手伸向它，它也在一次次确认你。`,
-    `背景共鸣：从第 1 题开始，你的选择有 ${n} 次落在${mainClass.name}的气质扇区里——所谓合适，就是不由自主地一直选它。`,
+    `气质共鸣：18 道题里，有 ${n} 次你的选择与${mainClass.name}的职业气质同频。你一次次把手伸向它，它也在一次次确认你。`,
+    `气质共鸣：从第 1 题开始，你的选择有 ${n} 次落在${mainClass.name}的气质扇区里——所谓合适，就是不由自主地一直选它。`,
   ];
   const r2 = pick(r2Variants, seed);
 

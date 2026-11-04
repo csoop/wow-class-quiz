@@ -178,7 +178,8 @@ function restoreSession() {
   if (!state.sample || state.sample.length !== SAMPLE_RULES.total) { clearSession(); return; }
   state.answers = state.sample.map((st, i) => {
     const a = s.answers[i];
-    return Number.isInteger(a) && a >= 0 && a < ANSWER_SCALE.length ? a : null;
+    const max = st.options ? st.options.length : ANSWER_SCALE.length;
+    return Number.isInteger(a) && a >= 0 && a < max ? a : null;
   });
   state.startedAt = s.startedAt || null;
   const firstUnanswered = state.answers.findIndex((a) => a === null);
@@ -430,6 +431,7 @@ function renderQuiz(main) {
   const q = state.sample[state.qIndex];
   const answered = state.answers.filter((a) => a !== null).length;
   const cur = state.answers[state.qIndex];
+  const optionLabels = q.options ? q.options.map((o) => o.label) : ANSWER_SCALE;
   const kindClass = { lore: 'quiz-kind--lore', zodiac: 'quiz-kind--zodiac', heart: 'quiz-kind--heart' }[q.kind];
   const kindIcon = { lore: 'sword', zodiac: 'star', heart: 'spark' }[q.kind];
 
@@ -450,10 +452,10 @@ function renderQuiz(main) {
 
       <div class="quiz-card" id="quizCard">
         <div class="quiz-kind ${kindClass}">${uiIcon(kindIcon, 15)} ${esc(KIND_LABELS[q.kind])}</div>
-        <p class="quiz-intro">凭第一直觉作答——你有多认同这句话？</p>
+        <p class="quiz-intro">凭第一直觉作答——${q.options ? '如果只能选一个，你会选哪个？' : '你有多认同这句话？'}</p>
         <h2 class="quiz-question" id="quizQuestion" tabindex="-1">${esc(q.text)}</h2>
         <div class="quiz-options quiz-options--scale" role="group" aria-labelledby="quizQuestion">
-          ${ANSWER_SCALE.map((label, i) => `
+          ${optionLabels.map((label, i) => `
             <button class="opt" type="button" data-opt="${i}" aria-pressed="${cur === i}">
               <span class="opt-key">${i + 1}</span>
               <span class="opt-text">${esc(label)}</span>
@@ -462,7 +464,7 @@ function renderQuiz(main) {
         </div>
         <div class="quiz-foot">
           <button class="btn btn--ghost btn--sm" id="quizBack" type="button" ${state.qIndex === 0 ? 'disabled' : ''}>${uiIcon('arrowLeft', 17)} 上一题</button>
-          <span class="quiz-hint"><kbd>1</kbd>-<kbd>5</kbd> 选择 · <kbd>←</kbd> 上一题 · 选择后自动进入下一题</span>
+          <span class="quiz-hint"><kbd>1</kbd>-<kbd>${optionLabels.length}</kbd> 选择 · <kbd>←</kbd> 上一题 · 选择后自动进入下一题</span>
         </div>
       </div>
     </div>
@@ -851,7 +853,7 @@ function renderHistory(main) {
               ${(r.answers || []).map((a, i) => {
                 const st = recSample[i];
                 if (!st) return '';
-                const level = ANSWER_SCALE[a] || '—';
+                const level = (st.options && st.options[a] ? st.options[a].label : ANSWER_SCALE[a]) || '—';
                 return `<div class="log-row"><span class="q">第 ${i + 1} 题</span><span>【${esc(level)}】${esc(st.text)}</span></div>`;
               }).join('')}
             </div>
@@ -1037,9 +1039,10 @@ document.addEventListener('keydown', (e) => {
   if ($('.modal-mask')) return;
   const tag = (e.target.tagName || '').toLowerCase();
   if (tag === 'input' || tag === 'textarea') return;
-  if (/^[1-5]$/.test(e.key)) {
+  if (/^[1-9]$/.test(e.key)) {
     e.preventDefault();
-    selectOption(Number(e.key) - 1);
+    const n = Number(e.key);
+    if (n <= $$('.opt').length) selectOption(n - 1);
   } else if (e.key === 'ArrowLeft') {
     e.preventDefault();
     goBack();

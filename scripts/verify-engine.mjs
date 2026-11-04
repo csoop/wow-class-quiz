@@ -1,8 +1,8 @@
 /**
- * 评分引擎批量验证脚本（v2 · Node，零依赖）
+ * 评分引擎批量验证脚本（v4 · Node，零依赖）
  * 运行：npm run verify
  * 检查项：
- *   A. 题库结构（84 条、三池、文本规范、权重结构 ≥2 类）
+ *   A. 题库结构（96 条、三池、文本规范、权重结构 ≥2 类、情境选项与暗面题比例）
  *   B. 职业池严格区分（怀旧服 9 / 正式服 13；模式标签过滤正确）
  *   C. 采样器（确定性 / 多样性 / 分池配比 / 覆盖约束 / 标签合规 / 还原）
  *   D. 确定性与分享编码（含篡改拒收）
@@ -75,7 +75,9 @@ QUESTIONS.forEach((s) => {
   for (const [k, map] of Object.entries({ dims: s.dims, classes: s.classes, zodiac: s.zodiac })) {
     if (!map) continue;
     for (const [id, w] of Object.entries(map)) {
-      if (typeof w !== 'number' || w <= 0 || w > 3) weightIssues.push(`${s.id}.${k}.${id}=${w}`);
+      // dims 允许负权重（v4 暗面题：赞同即更少该特质）；classes / zodiac 只能为正
+      const floor = k === 'dims' ? -3 : Number.MIN_VALUE;
+      if (typeof w !== 'number' || w === 0 || w > 3 || w < floor) weightIssues.push(`${s.id}.${k}.${id}=${w}`);
       if (k === 'dims' && !DIMENSIONS.includes(id)) weightIssues.push(`未知维度 ${id}`);
       if (k === 'classes' && !CLASSES.some((c) => c.id === id)) weightIssues.push(`未知职业 ${id}`);
       if (k === 'zodiac' && !ZODIAC.some((z) => z.id === id)) weightIssues.push(`未知星座 ${id}`);
@@ -84,6 +86,30 @@ QUESTIONS.forEach((s) => {
 });
 ok('每条 ≥2 类权重', multiCatIssues.length === 0, multiCatIssues.slice(0, 5).join(' | ') || '全部通过');
 ok('权重数值与 ID 合法', weightIssues.length === 0, weightIssues.slice(0, 5).join(' | ') || '全部通过');
+{
+  const withOptions = QUESTIONS.filter((s) => s.options);
+  const optIssues = [];
+  withOptions.forEach((s) => {
+    const opts = s.options;
+    if (!Array.isArray(opts) || opts.length < 2 || opts.length > 4) { optIssues.push(`${s.id} 选项数=${opts && opts.length}`); return; }
+    const labels = opts.map((o) => o.label);
+    if (new Set(labels).size !== labels.length) optIssues.push(`${s.id} 选项文案重复`);
+    labels.forEach((l) => { if (typeof l !== 'string' || l.length < 2 || l.length > 14) optIssues.push(`${s.id} 选项长度=${l && l.length}`); });
+    const ms = opts.map((o) => o.mult);
+    ms.forEach((m) => { if (typeof m !== 'number' || Math.abs(m) > 1) optIssues.push(`${s.id} mult=${m}`); });
+    if (!ms.some((m) => m > 0) || !ms.some((m) => m < 0)) optIssues.push(`${s.id} mult 未跨正负`);
+    const desc = ms.every((m, i) => i === 0 || m <= ms[i - 1]);
+    const asc = ms.every((m, i) => i === 0 || m >= ms[i - 1]);
+    if (!desc && !asc) optIssues.push(`${s.id} mult 非单调`);
+    if (!s.text.endsWith('——')) optIssues.push(`${s.id} 题干未以 —— 结尾`);
+  });
+  ok('情境选项结构合规（2-4 项 · 单轴单调 · 跨正负）', optIssues.length === 0, optIssues.slice(0, 6).join(' | ') || `${withOptions.length} 条`);
+  ok('情境选项比例 25%-40%', withOptions.length >= 24 && withOptions.length <= 38, `${withOptions.length}/${QUESTIONS.length}`);
+}
+{
+  const shadows = QUESTIONS.filter((s) => s.tone === 'shadow');
+  ok('暗面题比例 28%-40%', shadows.length >= 27 && shadows.length <= 38, `${shadows.length}/${QUESTIONS.length}`);
+}
 {
   const low = [];
   for (const z of ZODIAC) {
@@ -311,7 +337,7 @@ for (const mode of ['classic', 'retail']) {
 log.push('  [策略作答 → 结果]（供人工核对合理性的典型人格路径）：');
 for (const dim of DIMENSIONS) {
   const sample = sampleStatements('retail', 4242);
-  const answers = sample.map((s) => ((s.dims && s.dims[dim]) ? 0 : 2));
+  const answers = sample.map((s) => (((s.dims && s.dims[dim]) || 0) > 0 ? 0 : 2));
   const res = computeResult(sample, answers, 'retail');
   const resC = computeResult(sampleStatements('classic', 4242), answers, 'classic');
   log.push(`    偏爱「${dim}」→ 正式服 主=${res.main} 副=${res.secondary}｜怀旧服 主=${resC.main} 副=${resC.secondary}`);

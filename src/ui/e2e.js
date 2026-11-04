@@ -80,7 +80,7 @@ export async function runE2E() {
     check('答题页显示经典怀旧服', (document.querySelector('.quiz-mode')?.textContent || '').includes('经典怀旧服'));
     check('答题页显示已选星座', (document.querySelector('.quiz-sign')?.textContent || '').includes('狮子座'));
     const optCount0 = document.querySelectorAll('.opt').length;
-    check('每题 5 个五档选项', optCount0 === 5, `实际 ${optCount0}`);
+    check('每题 2-5 个选项', optCount0 >= 2 && optCount0 <= 5, `实际 ${optCount0}`);
     const qText0 = (document.querySelector('.quiz-question')?.textContent || '').trim();
     check('题干来自题库且非 undefined', new Set(QUESTIONS.map((s) => s.text)).has(qText0), qText0.slice(0, 36));
     check('进度条存在', !!document.querySelector('.progress'));

@@ -19,7 +19,7 @@ import { ZODIAC } from '../data/zodiac.js';
 import { LEVEL_MULT, ANSWER_LEVELS } from './sampler.js';
 import { SAMPLE_RULES } from '../data/questions.js';
 
-export const ENGINE_VERSION = '3.0.0';
+export const ENGINE_VERSION = '4.0.0';
 
 /* ---------- 静态预计算：星座对职业的覆盖率（与题库结构无关） ---------- */
 const ZODIAC_COVERAGE = {};
@@ -44,6 +44,16 @@ export const SECONDARY_COMPLEMENT_BONUS = 3;
 
 function round2(x) {
   return Math.round(x * 100) / 100;
+}
+
+/**
+ * 逐题解析作答乘子：情境题用自带 options 的 mult，其余沿用五档赞同度。
+ * 下标超出该题选项数时钳到最后一个选项（只会来自旧分享链接或旧本地进度），不抛错。
+ */
+export function levelMult(statement, level) {
+  const mults = statement && statement.options ? statement.options.map((o) => o.mult) : LEVEL_MULT;
+  const i = Math.min(Math.max(level, 0), mults.length - 1);
+  return mults[i] ?? 0;
 }
 
 /** 校验作答数组：必须为 18 个合法五档下标（0-4） */
@@ -90,7 +100,7 @@ export function computeResult(sample, answers, mode, sign = null) {
 
   answers.forEach((lvl, i) => {
     const st = sample[i];
-    const m = LEVEL_MULT[lvl] ?? 0;
+    const m = levelMult(st, lvl);
     if (!m) return;
     if (st.dims) DIMENSIONS.forEach((d) => { if (st.dims[d]) dimRaw[d] += st.dims[d] * m; });
     if (st.classes) Object.entries(st.classes).forEach(([cid, w]) => { if (cid in classRaw) classRaw[cid] += w * m; });
@@ -260,9 +270,9 @@ export function computeResult(sample, answers, mode, sign = null) {
   const classChoiceCount = {};
   pool.forEach((c) => { classChoiceCount[c.id] = 0; });
   answers.forEach((lvl, i) => {
-    const m = LEVEL_MULT[lvl] ?? 0;
-    if (m <= 0) return;
     const st = sample[i];
+    const m = levelMult(st, lvl);
+    if (m <= 0) return;
     if (!st.classes) return;
     Object.keys(st.classes).forEach((cid) => {
       if (cid in classChoiceCount) classChoiceCount[cid] += 1;
